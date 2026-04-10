@@ -2,15 +2,15 @@
  * map.js - D3.js world map rendering with projection, zoom/pan, and transitions
  */
 
-const WorldMap = (function () {
+var WorldMap = (function () {
   // ---- State ----
-  let svg, g, projection, pathGenerator, zoom;
-  let countryPaths, borderPaths, disputedPaths, graticuleEl;
-  let currentYear = 2026;
-  let tooltip;
+  var svg, g, projection, pathGenerator, zoom;
+  var currentYear = 2026;
+  var tooltip;
+  var graticuleEl;
 
-  // Pastel color palette for countries
-  const COUNTRY_COLORS = [
+  // Muted earth-tone palette for countries
+  var COUNTRY_COLORS = [
     '#3a6b5e', '#4a7a6e', '#5a8a7e', '#3a5a7a', '#4a6a8a',
     '#5a7a6a', '#6a8a5a', '#4a6a5a', '#3a7a7a', '#5a6a7a',
     '#6a7a5a', '#4a8a7a', '#5a7a5a', '#3a6a6a', '#6a6a7a',
@@ -18,10 +18,10 @@ const WorldMap = (function () {
   ];
 
   /**
-   * Assign a deterministic color to a country based on its index or id.
+   * Assign a deterministic color to a country based on its index.
    */
   function countryColor(d, i) {
-    const hash = i !== undefined ? i : (d.id ? parseInt(d.id, 10) : 0);
+    var hash = (i !== undefined) ? i : (d.id ? parseInt(d.id, 10) : 0);
     return COUNTRY_COLORS[Math.abs(hash) % COUNTRY_COLORS.length];
   }
 
@@ -36,12 +36,22 @@ const WorldMap = (function () {
   }
 
   /**
+   * Build a stable key for a feature so D3 enter/update/exit works correctly.
+   */
+  function featureKey(d, i) {
+    if (d.id) return 'id_' + d.id;
+    var name = d.properties && (d.properties.name || d.properties.NAME);
+    if (name) return 'name_' + name;
+    return 'idx_' + i;
+  }
+
+  /**
    * Initialize the SVG map inside #map-container.
    */
   function init() {
-    const container = document.getElementById('map-container');
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    var container = document.getElementById('map-container');
+    var width = container.clientWidth;
+    var height = container.clientHeight;
 
     // Create SVG
     svg = d3.select('#map-container')
@@ -75,7 +85,7 @@ const WorldMap = (function () {
       .attr('d', pathGenerator);
 
     // Graticule (lat/lon grid)
-    const graticule = d3.geoGraticule();
+    var graticule = d3.geoGraticule();
     graticuleEl = g.append('path')
       .datum(graticule())
       .attr('class', 'graticule')
@@ -103,9 +113,9 @@ const WorldMap = (function () {
    * Handle window resize: update projection and redraw.
    */
   function handleResize() {
-    const container = document.getElementById('map-container');
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    var container = document.getElementById('map-container');
+    var width = container.clientWidth;
+    var height = container.clientHeight;
 
     svg.attr('width', width).attr('height', height);
 
@@ -128,17 +138,15 @@ const WorldMap = (function () {
    * Uses D3 enter/update/exit pattern with transitions.
    */
   function renderCountries(geojson, animate) {
-    const countriesGroup = g.select('#countries-group');
-    const bordersGroup = g.select('#borders-group');
+    var countriesGroup = g.select('#countries-group');
+    var bordersGroup = g.select('#borders-group');
 
-    const features = geojson.features || [];
-    const duration = animate ? 400 : 0;
+    var features = geojson.features || [];
+    var duration = animate ? 400 : 0;
 
     // ---- Country fills ----
-    const countries = countriesGroup.selectAll('.country')
-      .data(features, function (d) {
-        return d.id || d.properties?.name || d.properties?.NAME || Math.random();
-      });
+    var countries = countriesGroup.selectAll('.country')
+      .data(features, featureKey);
 
     // Exit
     countries.exit()
@@ -147,14 +155,14 @@ const WorldMap = (function () {
       .remove();
 
     // Enter
-    const enter = countries.enter()
+    var enter = countries.enter()
       .append('path')
       .attr('class', 'country')
       .attr('d', pathGenerator)
       .style('fill', function (d, i) { return countryColor(d, i); })
       .style('opacity', 0)
       .on('mousemove', function (event, d) {
-        const name = getFeatureName(d);
+        var name = getFeatureName(d);
         tooltip
           .html(name)
           .classed('visible', true)
@@ -168,15 +176,13 @@ const WorldMap = (function () {
     enter.transition().duration(duration)
       .style('opacity', 1);
 
-    // Update
+    // Update existing
     countries
       .transition().duration(duration)
       .attr('d', pathGenerator)
       .style('fill', function (d, i) { return countryColor(d, i); });
 
     // ---- Country border lines ----
-    // Merge all features into one mesh for crisp borders
-    // For GeoJSON we draw each feature's border individually
     bordersGroup.selectAll('.country-borders').remove();
 
     bordersGroup.selectAll('.country-borders')
@@ -194,9 +200,9 @@ const WorldMap = (function () {
    * Render disputed territories overlay.
    */
   function renderDisputedZones(geojson) {
-    const disputedGroup = g.select('#disputed-group');
+    var disputedGroup = g.select('#disputed-group');
 
-    const zones = disputedGroup.selectAll('.disputed-zone')
+    var zones = disputedGroup.selectAll('.disputed-zone')
       .data(geojson.features, function (d) { return d.properties.name; });
 
     zones.exit().remove();
@@ -220,12 +226,12 @@ const WorldMap = (function () {
     if (animate === undefined) animate = true;
     currentYear = year;
 
-    const loading = document.getElementById('loading-overlay');
+    var loading = document.getElementById('loading-overlay');
     loading.classList.remove('hidden');
 
     try {
-      const { geojson, source, actualYear } = await BorderData.loadBordersForYear(year);
-      renderCountries(geojson, animate);
+      var result = await BorderData.loadBordersForYear(year);
+      renderCountries(result.geojson, animate);
 
       // Show disputed zones only for modern era (post-1990)
       if (year >= 1990) {
@@ -248,8 +254,8 @@ const WorldMap = (function () {
   }
 
   return {
-    init,
-    setYear,
-    getCurrentYear
+    init: init,
+    setYear: setYear,
+    getCurrentYear: getCurrentYear
   };
 })();

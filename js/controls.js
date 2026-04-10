@@ -2,23 +2,25 @@
  * controls.js - Playback controls: rewind button, spacebar, hold-to-rewind
  */
 
-const Controls = (function () {
+var Controls = (function () {
   // ---- State ----
-  let currentYear = 2026;
-  let isRewinding = false;
-  let rewindInterval = null;
-  let holdTimeout = null;
-  let rewindStartTime = 0;
-  let onYearChange = null; // callback
+  var currentYear = 2026;
+  var isRewinding = false;
+  var rewindInterval = null;
+  var holdTimeout = null;
+  var rewindStartTime = 0;
+  var onYearChange = null; // callback
+  var rewindDirection = -1; // -1 = back, +1 = forward
 
   // ---- Config ----
-  const HOLD_DELAY = 300;         // ms before continuous rewind starts
-  const INITIAL_SPEED = 500;      // ms per year at start of hold
-  const MIN_SPEED = 80;           // ms per year at max acceleration
-  const ACCELERATION_TIME = 8000; // ms to reach max speed
+  var HOLD_DELAY = 300;         // ms before continuous rewind starts
+  var INITIAL_SPEED = 500;      // ms per year at start of hold
+  var MIN_SPEED = 80;           // ms per year at max acceleration
+  var ACCELERATION_TIME = 8000; // ms to reach max speed
 
   // ---- DOM refs ----
-  let yearDisplay, eraLabel, rewindBtn, forwardBtn, yearSlider, speedIndicator, speedText;
+  var yearDisplay, eraLabel, rewindBtn, forwardBtn, yearSlider;
+  var speedIndicator, speedText;
 
   /**
    * Initialize controls and bind event listeners.
@@ -44,23 +46,23 @@ const Controls = (function () {
 
     // ---- Rewind button: click and hold ----
     rewindBtn.addEventListener('mousedown', handleRewindStart);
-    rewindBtn.addEventListener('mouseup', handleRewindStop);
-    rewindBtn.addEventListener('mouseleave', handleRewindStop);
+    rewindBtn.addEventListener('mouseup', handleStop);
+    rewindBtn.addEventListener('mouseleave', handleStop);
     rewindBtn.addEventListener('touchstart', function (e) {
       e.preventDefault();
       handleRewindStart();
     });
-    rewindBtn.addEventListener('touchend', handleRewindStop);
+    rewindBtn.addEventListener('touchend', handleStop);
 
     // ---- Forward button ----
     forwardBtn.addEventListener('mousedown', handleForwardStart);
-    forwardBtn.addEventListener('mouseup', handleForwardStop);
-    forwardBtn.addEventListener('mouseleave', handleForwardStop);
+    forwardBtn.addEventListener('mouseup', handleStop);
+    forwardBtn.addEventListener('mouseleave', handleStop);
     forwardBtn.addEventListener('touchstart', function (e) {
       e.preventDefault();
       handleForwardStart();
     });
-    forwardBtn.addEventListener('touchend', handleForwardStop);
+    forwardBtn.addEventListener('touchend', handleStop);
 
     // ---- Spacebar ----
     document.addEventListener('keydown', handleKeyDown);
@@ -70,92 +72,67 @@ const Controls = (function () {
     yearSlider.addEventListener('input', handleSliderInput);
   }
 
-  // ---- Rewind logic ----
+  // ---- Rewind / Forward logic ----
 
   function handleRewindStart() {
     if (isRewinding) return;
-    // Immediate single step
-    stepBack();
-
-    // Start hold timer for continuous rewind
+    rewindDirection = -1;
+    stepYear(-1);
     holdTimeout = setTimeout(function () {
-      startContinuousRewind();
+      startContinuous(-1);
     }, HOLD_DELAY);
-  }
-
-  function handleRewindStop() {
-    clearTimeout(holdTimeout);
-    holdTimeout = null;
-    stopContinuousRewind();
   }
 
   function handleForwardStart() {
-    // Single step forward
-    stepForward();
-
+    if (isRewinding) return;
+    rewindDirection = 1;
+    stepYear(1);
     holdTimeout = setTimeout(function () {
-      startContinuousForward();
+      startContinuous(1);
     }, HOLD_DELAY);
   }
 
-  function handleForwardStop() {
+  function handleStop() {
     clearTimeout(holdTimeout);
     holdTimeout = null;
-    stopContinuousRewind();
+    stopContinuous();
   }
 
-  function startContinuousRewind() {
+  function startContinuous(direction) {
     if (isRewinding) return;
     isRewinding = true;
+    rewindDirection = direction;
     rewindStartTime = Date.now();
-    rewindBtn.classList.add('active');
-    yearDisplay.classList.add('rewinding');
+
+    if (direction === -1) {
+      rewindBtn.classList.add('active');
+      yearDisplay.classList.add('rewinding');
+    } else {
+      forwardBtn.classList.add('active');
+    }
     speedIndicator.classList.remove('hidden');
 
-    scheduleNextRewindStep();
+    scheduleNextStep();
   }
 
-  function startContinuousForward() {
-    if (isRewinding) return;
-    isRewinding = true;
-    rewindStartTime = Date.now();
-    forwardBtn.classList.add('active');
-    speedIndicator.classList.remove('hidden');
-
-    scheduleNextForwardStep();
-  }
-
-  function scheduleNextRewindStep() {
+  function scheduleNextStep() {
     if (!isRewinding) return;
-    const speed = getCurrentSpeed();
+    var speed = getCurrentSpeed();
     updateSpeedDisplay(speed);
 
     rewindInterval = setTimeout(function () {
-      stepBack();
-      if (isRewinding && currentYear > BorderData.getMinYear()) {
-        scheduleNextRewindStep();
+      stepYear(rewindDirection);
+      var minY = BorderData.getMinYear();
+      var maxY = BorderData.getMaxYear();
+      if (isRewinding && currentYear > minY && currentYear < maxY) {
+        scheduleNextStep();
       } else {
-        stopContinuousRewind();
+        stopContinuous();
       }
     }, speed);
   }
 
-  function scheduleNextForwardStep() {
-    if (!isRewinding) return;
-    const speed = getCurrentSpeed();
-    updateSpeedDisplay(speed);
-
-    rewindInterval = setTimeout(function () {
-      stepForward();
-      if (isRewinding && currentYear < BorderData.getMaxYear()) {
-        scheduleNextForwardStep();
-      } else {
-        stopContinuousRewind();
-      }
-    }, speed);
-  }
-
-  function stopContinuousRewind() {
+  function stopContinuous() {
     isRewinding = false;
     clearTimeout(rewindInterval);
     rewindInterval = null;
@@ -166,35 +143,29 @@ const Controls = (function () {
   }
 
   /**
-   * Calculate current rewind speed based on how long the button has been held.
+   * Calculate current speed based on how long the button has been held.
    * Accelerates from INITIAL_SPEED to MIN_SPEED over ACCELERATION_TIME.
    */
   function getCurrentSpeed() {
-    const elapsed = Date.now() - rewindStartTime;
-    const progress = Math.min(elapsed / ACCELERATION_TIME, 1);
-    // Ease-out curve for smooth acceleration
-    const eased = 1 - Math.pow(1 - progress, 2);
+    var elapsed = Date.now() - rewindStartTime;
+    var progress = Math.min(elapsed / ACCELERATION_TIME, 1);
+    var eased = 1 - Math.pow(1 - progress, 2);
     return INITIAL_SPEED - eased * (INITIAL_SPEED - MIN_SPEED);
   }
 
   function updateSpeedDisplay(speed) {
-    const multiplier = Math.round(INITIAL_SPEED / speed);
+    var multiplier = Math.round(INITIAL_SPEED / speed);
     speedText.textContent = multiplier + 'x';
   }
 
-  // ---- Step functions ----
+  // ---- Step function ----
 
-  function stepBack() {
-    if (currentYear > BorderData.getMinYear()) {
-      currentYear--;
-      updateDisplay();
-      onYearChange(currentYear);
-    }
-  }
-
-  function stepForward() {
-    if (currentYear < BorderData.getMaxYear()) {
-      currentYear++;
+  function stepYear(direction) {
+    var minY = BorderData.getMinYear();
+    var maxY = BorderData.getMaxYear();
+    var next = currentYear + direction;
+    if (next >= minY && next <= maxY) {
+      currentYear = next;
       updateDisplay();
       onYearChange(currentYear);
     }
@@ -204,22 +175,21 @@ const Controls = (function () {
 
   function handleKeyDown(event) {
     if (event.code !== 'Space' && event.key !== ' ') return;
+    // Don't capture space when user is interacting with the slider or other inputs
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON') return;
     event.preventDefault();
 
     if (event.repeat) {
-      // Key is being held - start continuous if not already
       if (!isRewinding) {
-        startContinuousRewind();
+        startContinuous(-1);
       }
       return;
     }
 
     // First press - single step back
-    stepBack();
-
-    // Set up hold detection
+    stepYear(-1);
     holdTimeout = setTimeout(function () {
-      startContinuousRewind();
+      startContinuous(-1);
     }, HOLD_DELAY);
   }
 
@@ -228,7 +198,7 @@ const Controls = (function () {
     event.preventDefault();
     clearTimeout(holdTimeout);
     holdTimeout = null;
-    stopContinuousRewind();
+    stopContinuous();
   }
 
   // ---- Slider ----
@@ -242,15 +212,22 @@ const Controls = (function () {
   // ---- Display updates ----
 
   function updateDisplay() {
-    const displayYear = currentYear < 0 ? Math.abs(currentYear) + ' BCE' : currentYear;
+    var displayYear;
+    if (currentYear < 0) {
+      displayYear = Math.abs(currentYear) + ' BCE';
+    } else {
+      displayYear = String(currentYear);
+    }
     yearDisplay.textContent = displayYear;
     yearSlider.value = currentYear;
 
     // Era label
-    if (currentYear < 0) {
+    if (currentYear < -1000) {
       eraLabel.textContent = 'Ancient World';
-    } else if (currentYear < 500) {
+    } else if (currentYear < 0) {
       eraLabel.textContent = 'Classical Antiquity';
+    } else if (currentYear < 500) {
+      eraLabel.textContent = 'Late Antiquity';
     } else if (currentYear < 1500) {
       eraLabel.textContent = 'Medieval Period';
     } else if (currentYear < 1800) {
@@ -279,8 +256,8 @@ const Controls = (function () {
   }
 
   return {
-    init,
-    setYear,
-    getYear
+    init: init,
+    setYear: setYear,
+    getYear: getYear
   };
 })();
