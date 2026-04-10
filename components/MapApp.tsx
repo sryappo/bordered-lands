@@ -1,9 +1,14 @@
 'use client';
 
+import { useRef } from 'react';
+import MapCanvas, { type MapCanvasHandle } from './Map/MapCanvas';
+
 export default function MapApp() {
+  const mapRef = useRef<MapCanvasHandle>(null);
+
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-dark-bg text-white">
-      <p className="text-2xl font-light tracking-widest">Bordered Lands</p>
+    <div className="flex flex-col h-screen w-screen bg-dark-bg">
+      <MapCanvas ref={mapRef} />
     </div>
   );
 }
