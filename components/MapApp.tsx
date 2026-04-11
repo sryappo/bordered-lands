@@ -5,6 +5,7 @@ import * as d3 from 'd3';
 import MapCanvas, { type MapCanvasHandle } from './Map/MapCanvas';
 import YearDisplay from './Controls/YearDisplay';
 import PlaybackButtons from './Controls/PlaybackButtons';
+import YearSlider from './Controls/YearSlider';
 import { renderCountries } from './Map/render-countries';
 import { renderDisputedZones, clearDisputedZones } from './Map/render-disputed';
 import { loadBordersForYear, getDisputedZones } from '@/lib/border-data';
@@ -115,6 +116,14 @@ export default function MapApp() {
     [updateMap]
   );
 
+  const handleSliderChange = useCallback(
+    (newYear: number) => {
+      setYear(newYear);
+      handleYearChange(newYear, false); // no morph when scrubbing
+    },
+    [handleYearChange]
+  );
+
   const handleYearStep = useCallback(
     (direction: -1 | 1) => {
       setYear((prev) => {
@@ -142,6 +151,7 @@ export default function MapApp() {
           onYearStep={handleYearStep}
           onRewindingChange={setIsRewinding}
         />
+        <YearSlider year={year} onYearChange={handleSliderChange} />
       </div>
 
       {/* Tooltip */}
