@@ -4,11 +4,12 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import * as d3 from 'd3';
 import MapCanvas, { type MapCanvasHandle } from './Map/MapCanvas';
 import YearDisplay from './Controls/YearDisplay';
+import PlaybackButtons from './Controls/PlaybackButtons';
 import { renderCountries } from './Map/render-countries';
 import { renderDisputedZones, clearDisputedZones } from './Map/render-disputed';
 import { loadBordersForYear, getDisputedZones } from '@/lib/border-data';
 import { getFeatureName } from '@/lib/country-metadata';
-import { MAX_YEAR, MORPH_STEP_MS, DEBOUNCE_MS } from '@/lib/constants';
+import { MAX_YEAR, MIN_YEAR, MORPH_STEP_MS, DEBOUNCE_MS } from '@/lib/constants';
 import type { BorderResult } from '@/lib/types';
 
 export default function MapApp() {
@@ -114,11 +115,34 @@ export default function MapApp() {
     [updateMap]
   );
 
+  const handleYearStep = useCallback(
+    (direction: -1 | 1) => {
+      setYear((prev) => {
+        const next = prev + direction;
+        if (next >= MIN_YEAR && next <= MAX_YEAR) {
+          handleYearChange(next, true);
+          return next;
+        }
+        return prev;
+      });
+    },
+    [handleYearChange]
+  );
+
   return (
     <div className="flex flex-col h-screen w-screen bg-dark-bg relative">
       <MapCanvas ref={mapRef} />
 
       <YearDisplay year={year} isRewinding={isRewinding} />
+
+      {/* Controls - bottom center */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 pb-4 flex flex-col items-center gap-2.5 bg-gradient-to-t from-dark-bg/[0.92] to-transparent pt-12">
+        <PlaybackButtons
+          year={year}
+          onYearStep={handleYearStep}
+          onRewindingChange={setIsRewinding}
+        />
+      </div>
 
       {/* Tooltip */}
       {hoveredName && hoverPos && (
