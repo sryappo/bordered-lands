@@ -169,6 +169,17 @@ export default function MapApp() {
             onRewindingChange={setIsRewinding}
           />
           <YearSlider year={year} onYearChange={handleSliderChange} />
+          {/* Legend */}
+          <div className="flex gap-5 text-xs text-[#667]">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-4 h-2.5 rounded-sm bg-[#5a8a6a] border border-[#3a4a5a]" />
+              Country borders
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-4 h-2.5 rounded-sm bg-[rgba(255,167,38,0.3)] border border-dashed border-[#ff9800]" />
+              Disputed zones
+            </span>
+          </div>
         </div>
       </ControlOverlay>
 

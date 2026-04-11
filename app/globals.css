@@ -28,3 +28,21 @@ body {
   stroke-width: 1px;
   filter: brightness(1.15);
 }
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Prevent text selection on controls */
+.controls-area {
+  user-select: none;
+  -webkit-user-select: none;
+}

@@ -53,7 +53,8 @@ const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       const defs = svg.select('defs').empty()
         ? svg.insert('defs', ':first-child')
         : svg.select('defs');
-      defs.selectAll('#ocean-gradient').remove();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (defs as any).selectAll('#ocean-gradient').remove();
       const radial = defs.append('radialGradient')
         .attr('id', 'ocean-gradient')
         .attr('cx', '50%').attr('cy', '50%').attr('r', '60%');
