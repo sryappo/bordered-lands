@@ -6,6 +6,7 @@ import MapCanvas, { type MapCanvasHandle } from './Map/MapCanvas';
 import YearDisplay from './Controls/YearDisplay';
 import PlaybackButtons from './Controls/PlaybackButtons';
 import YearSlider from './Controls/YearSlider';
+import ControlOverlay from './Controls/ControlOverlay';
 import { renderCountries } from './Map/render-countries';
 import { renderDisputedZones, clearDisputedZones } from './Map/render-disputed';
 import { loadBordersForYear, getDisputedZones } from '@/lib/border-data';
@@ -142,17 +143,20 @@ export default function MapApp() {
     <div className="flex flex-col h-screen w-screen bg-dark-bg relative">
       <MapCanvas ref={mapRef} />
 
-      <YearDisplay year={year} isRewinding={isRewinding} />
+      <ControlOverlay forceVisible={isRewinding}>
+        <YearDisplay year={year} isRewinding={isRewinding} />
+      </ControlOverlay>
 
-      {/* Controls - bottom center */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 pb-4 flex flex-col items-center gap-2.5 bg-gradient-to-t from-dark-bg/[0.92] to-transparent pt-12">
-        <PlaybackButtons
-          year={year}
-          onYearStep={handleYearStep}
-          onRewindingChange={setIsRewinding}
-        />
-        <YearSlider year={year} onYearChange={handleSliderChange} />
-      </div>
+      <ControlOverlay forceVisible={isRewinding}>
+        <div className="absolute bottom-0 left-0 right-0 z-10 pb-4 flex flex-col items-center gap-2.5 bg-gradient-to-t from-dark-bg/[0.92] to-transparent pt-12">
+          <PlaybackButtons
+            year={year}
+            onYearStep={handleYearStep}
+            onRewindingChange={setIsRewinding}
+          />
+          <YearSlider year={year} onYearChange={handleSliderChange} />
+        </div>
+      </ControlOverlay>
 
       {/* Tooltip */}
       {hoveredName && hoverPos && (
