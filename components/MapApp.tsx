@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import * as d3 from 'd3';
 import MapCanvas, { type MapCanvasHandle } from './Map/MapCanvas';
+import YearDisplay from './Controls/YearDisplay';
 import { renderCountries } from './Map/render-countries';
 import { renderDisputedZones, clearDisputedZones } from './Map/render-disputed';
 import { loadBordersForYear, getDisputedZones } from '@/lib/border-data';
@@ -116,6 +117,8 @@ export default function MapApp() {
   return (
     <div className="flex flex-col h-screen w-screen bg-dark-bg relative">
       <MapCanvas ref={mapRef} />
+
+      <YearDisplay year={year} isRewinding={isRewinding} />
 
       {/* Tooltip */}
       {hoveredName && hoverPos && (
