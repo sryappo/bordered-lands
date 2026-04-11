@@ -7,6 +7,7 @@ import YearDisplay from './Controls/YearDisplay';
 import PlaybackButtons from './Controls/PlaybackButtons';
 import YearSlider from './Controls/YearSlider';
 import ControlOverlay from './Controls/ControlOverlay';
+import InfoPanel from './InfoPanel/InfoPanel';
 import { renderCountries } from './Map/render-countries';
 import { renderDisputedZones, clearDisputedZones } from './Map/render-disputed';
 import { loadBordersForYear, getDisputedZones } from '@/lib/border-data';
@@ -139,9 +140,22 @@ export default function MapApp() {
     [handleYearChange]
   );
 
+  const handleCloseInfoPanel = useCallback(() => {
+    setSelectedFeature(null);
+  }, []);
+
+  const handleMapBackgroundClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as Element;
+    if (target.tagName === 'svg' || target.classList.contains('ocean')) {
+      setSelectedFeature(null);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col h-screen w-screen bg-dark-bg relative">
-      <MapCanvas ref={mapRef} />
+      <div className="contents" onClick={handleMapBackgroundClick}>
+        <MapCanvas ref={mapRef} />
+      </div>
 
       <ControlOverlay forceVisible={isRewinding}>
         <YearDisplay year={year} isRewinding={isRewinding} />
@@ -175,6 +189,13 @@ export default function MapApp() {
           <span className="text-sm text-text-secondary">Loading borders...</span>
         </div>
       )}
+
+      <InfoPanel
+        feature={selectedFeature}
+        year={year}
+        borderResult={currentResultRef.current}
+        onClose={handleCloseInfoPanel}
+      />
     </div>
   );
 }
