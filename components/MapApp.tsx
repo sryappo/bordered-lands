@@ -25,8 +25,9 @@ export default function MapApp() {
   } | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<GeoJSON.Feature | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isRewinding, setIsRewinding] = useState(false);
+  const [isAutoplay, setIsAutoplay] = useState(false);
+  const [autoplaySpeed, setAutoplaySpeed] = useState<1 | 2 | 4>(1);
   const [disputedGeojson, setDisputedGeojson] = useState<GeoJSON.FeatureCollection | null>(null);
 
   const previousGeojsonRef = useRef<GeoJSON.FeatureCollection | null>(null);
@@ -35,6 +36,8 @@ export default function MapApp() {
   const lastRenderYearRef = useRef<number | null>(null);
   const isRewindingRef = useRef(false);
   const disputedGeojsonRef = useRef<GeoJSON.FeatureCollection | null>(null);
+  const autoplayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isAutoplayRef = useRef(false);
 
   const updateMap = useCallback(
     async (targetYear: number, animate: boolean) => {
@@ -89,7 +92,7 @@ export default function MapApp() {
         const disputedData = disputedGeojsonRef.current;
         if (disputedData && disputedData.features.length > 0) {
           renderDisputedZones(disputedGroup, disputedData, pathGenerator, {
-            pulse: false,
+            pulse: isAutoplayRef.current,
           });
         } else {
           clearDisputedZones(disputedGroup);
@@ -104,7 +107,7 @@ export default function MapApp() {
         setLoading(false);
       }
     },
-    [] // no deps — uses refs for isRewinding to avoid stale closures
+    [] // no deps — uses refs for isRewinding/isAutoplay to avoid stale closures
   );
 
   // Initial load on mount
@@ -116,6 +119,11 @@ export default function MapApp() {
   useEffect(() => {
     isRewindingRef.current = isRewinding;
   }, [isRewinding]);
+
+  // Keep isAutoplayRef in sync with state
+  useEffect(() => {
+    isAutoplayRef.current = isAutoplay;
+  }, [isAutoplay]);
 
   // Load disputed zones when year changes. Uses a cancelled flag so that
   // rapid slider scrubbing only commits the latest result.
@@ -145,12 +153,12 @@ export default function MapApp() {
     if (!pathGenerator || !disputedGroup) return;
     if (disputedGeojson && disputedGeojson.features.length > 0) {
       renderDisputedZones(disputedGroup, disputedGeojson, pathGenerator, {
-        pulse: false,
+        pulse: isAutoplay,
       });
     } else {
       clearDisputedZones(disputedGroup);
     }
-  }, [disputedGeojson]);
+  }, [disputedGeojson, isAutoplay]);
 
   const handleYearChange = useCallback(
     (newYear: number, shouldAnimate = true) => {
@@ -164,16 +172,57 @@ export default function MapApp() {
     [updateMap]
   );
 
+  const stopAutoplay = useCallback(() => {
+    setIsAutoplay(false);
+  }, []);
+
+  // Autoplay loop: advance year by 1 every (400 / speed) ms while active.
+  useEffect(() => {
+    if (!isAutoplay) {
+      if (autoplayTimerRef.current) {
+        clearInterval(autoplayTimerRef.current);
+        autoplayTimerRef.current = null;
+      }
+      return;
+    }
+
+    const intervalMs = Math.round(400 / autoplaySpeed);
+    autoplayTimerRef.current = setInterval(() => {
+      setYear((prev) => {
+        if (prev >= MAX_YEAR) {
+          setIsAutoplay(false);
+          return prev;
+        }
+        const next = prev + 1;
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = setTimeout(() => {
+          debounceTimerRef.current = null;
+          updateMap(next, true);
+        }, DEBOUNCE_MS);
+        return next;
+      });
+    }, intervalMs);
+
+    return () => {
+      if (autoplayTimerRef.current) {
+        clearInterval(autoplayTimerRef.current);
+        autoplayTimerRef.current = null;
+      }
+    };
+  }, [isAutoplay, autoplaySpeed, updateMap]);
+
   const handleSliderChange = useCallback(
     (newYear: number) => {
+      stopAutoplay();
       setYear(newYear);
       handleYearChange(newYear, false); // no morph when scrubbing
     },
-    [handleYearChange]
+    [handleYearChange, stopAutoplay]
   );
 
   const handleYearStep = useCallback(
     (direction: -1 | 1) => {
+      stopAutoplay();
       setYear((prev) => {
         const next = prev + direction;
         if (next >= MIN_YEAR && next <= MAX_YEAR) {
@@ -183,19 +232,59 @@ export default function MapApp() {
         return prev;
       });
     },
-    [handleYearChange]
+    [handleYearChange, stopAutoplay]
   );
+
+  const handleRewindingChange = useCallback(
+    (rewinding: boolean) => {
+      if (rewinding) stopAutoplay();
+      setIsRewinding(rewinding);
+    },
+    [stopAutoplay]
+  );
+
+  const handleTogglePlay = useCallback(() => {
+    setIsAutoplay((prev) => {
+      // If starting autoplay at the final year, rewind to the start so there's
+      // something to play. Otherwise just toggle.
+      if (!prev && year >= MAX_YEAR) {
+        return false;
+      }
+      return !prev;
+    });
+  }, [year]);
+
+  const handleCycleSpeed = useCallback(() => {
+    setAutoplaySpeed((prev) => {
+      if (prev === 1) return 2;
+      if (prev === 2) return 4;
+      return 1;
+    });
+  }, []);
 
   const handleCloseInfoPanel = useCallback(() => {
     setSelectedFeature(null);
   }, []);
 
-  const handleMapBackgroundClick = useCallback((e: React.MouseEvent) => {
-    const target = e.target as Element;
-    if (target.tagName === 'svg' || target.classList.contains('ocean')) {
-      setSelectedFeature(null);
+  const handleMapBackgroundClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as Element;
+      if (target.tagName === 'svg' || target.classList.contains('ocean')) {
+        stopAutoplay();
+        setSelectedFeature(null);
+      }
+    },
+    [stopAutoplay]
+  );
+
+  // Wrap country-click (for info panel open) so autoplay stops on selection.
+  // The actual click handler lives inside `renderCountries`; we detect a newly
+  // selected feature by watching `selectedFeature`.
+  useEffect(() => {
+    if (selectedFeature) {
+      stopAutoplay();
     }
-  }, []);
+  }, [selectedFeature, stopAutoplay]);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-dark-bg relative">
@@ -203,16 +292,20 @@ export default function MapApp() {
         <MapCanvas ref={mapRef} />
       </div>
 
-      <ControlOverlay forceVisible={isRewinding}>
+      <ControlOverlay forceVisible={isRewinding || isAutoplay}>
         <YearDisplay year={year} isRewinding={isRewinding} />
       </ControlOverlay>
 
-      <ControlOverlay forceVisible={isRewinding}>
+      <ControlOverlay forceVisible={isRewinding || isAutoplay}>
         <div className="absolute bottom-0 left-0 right-0 z-10 pb-4 flex flex-col items-center gap-2.5 bg-gradient-to-t from-dark-bg/[0.92] to-transparent pt-12">
           <PlaybackButtons
             year={year}
             onYearStep={handleYearStep}
-            onRewindingChange={setIsRewinding}
+            onRewindingChange={handleRewindingChange}
+            isAutoplay={isAutoplay}
+            autoplaySpeed={autoplaySpeed}
+            onTogglePlay={handleTogglePlay}
+            onCycleSpeed={handleCycleSpeed}
           />
           <YearSlider year={year} onYearChange={handleSliderChange} />
           {/* Legend */}

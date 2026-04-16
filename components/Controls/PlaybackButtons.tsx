@@ -15,12 +15,20 @@ interface PlaybackButtonsProps {
   year: number;
   onYearStep: (direction: -1 | 1) => void;
   onRewindingChange: (isRewinding: boolean) => void;
+  isAutoplay: boolean;
+  autoplaySpeed: 1 | 2 | 4;
+  onTogglePlay: () => void;
+  onCycleSpeed: () => void;
 }
 
 export default function PlaybackButtons({
   year,
   onYearStep,
   onRewindingChange,
+  isAutoplay,
+  autoplaySpeed,
+  onTogglePlay,
+  onCycleSpeed,
 }: PlaybackButtonsProps) {
   const isRewindingRef = useRef(false);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,6 +164,30 @@ export default function PlaybackButtons({
         </svg>
       </button>
 
+      {/* Play / Pause button */}
+      <button
+        type="button"
+        onClick={onTogglePlay}
+        aria-label={isAutoplay ? 'Pause' : 'Play'}
+        title={isAutoplay ? 'Pause autoplay' : 'Play autoplay'}
+        className={`w-12 h-12 rounded-full border flex items-center justify-center cursor-pointer transition-all duration-200 ${
+          isAutoplay
+            ? 'bg-accent-amber/20 border-accent-amber text-accent-amber hover:bg-accent-amber/30'
+            : 'bg-white/[0.08] border-white/15 text-[#ccc] hover:bg-white/15 hover:text-white hover:border-white/30'
+        }`}
+      >
+        {isAutoplay ? (
+          <svg viewBox="0 0 24 24" width={22} height={22}>
+            <rect x={6} y={5} width={4} height={14} fill="currentColor" />
+            <rect x={14} y={5} width={4} height={14} fill="currentColor" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" width={22} height={22}>
+            <polygon points="7,5 19,12 7,19" fill="currentColor" />
+          </svg>
+        )}
+      </button>
+
       {/* Rewind button (primary) */}
       <button
         className="w-[52px] h-[52px] rounded-full bg-white/[0.08] border border-white/15 text-[#ccc] flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/15 hover:text-white hover:border-white/30 active:bg-accent-amber/20 active:border-accent-amber active:text-accent-amber"
@@ -170,11 +202,14 @@ export default function PlaybackButtons({
         </svg>
       </button>
 
-      {/* Speed indicator */}
+      {/* Speed indicator (autoplay: clickable cycle; otherwise rewind ramp) */}
       <SpeedIndicator
-        visible={isRewindingRef.current}
+        visible={isRewindingRef.current || isAutoplay}
         speed={currentSpeedRef.current}
         baseSpeed={INITIAL_SPEED}
+        isAutoplay={isAutoplay}
+        autoplaySpeed={autoplaySpeed}
+        onCycleSpeed={onCycleSpeed}
       />
     </div>
   );
