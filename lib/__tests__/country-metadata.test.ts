@@ -6,6 +6,7 @@ import {
   getEraLabel,
   getEraPalette,
   formatYear,
+  formatBorderDateRange,
 } from '../country-metadata';
 import { PALETTE_WARM, PALETTE_MUTED, PALETTE_COOL } from '../constants';
 
@@ -87,5 +88,48 @@ describe('formatYear', () => {
   it('formats CE years', () => {
     expect(formatYear(2026)).toBe('2026');
     expect(formatYear(100)).toBe('100');
+  });
+});
+
+describe('formatBorderDateRange', () => {
+  it('returns "start–present" when end year is missing', () => {
+    expect(formatBorderDateRange({ gwsyear: 1958 })).toBe('1958\u2013present');
+  });
+
+  it('returns "start–present" when end year is 0', () => {
+    expect(formatBorderDateRange({ gwsyear: 1958, gweyear: 0 })).toBe(
+      '1958\u2013present'
+    );
+  });
+
+  it('returns "start–end" when both years are valid', () => {
+    expect(formatBorderDateRange({ gwsyear: 1958, gweyear: 1990 })).toBe(
+      '1958\u20131990'
+    );
+  });
+
+  it('returns null when gwsyear is missing', () => {
+    expect(formatBorderDateRange({})).toBeNull();
+  });
+
+  it('returns null when gwsyear is 0 or invalid', () => {
+    expect(formatBorderDateRange({ gwsyear: 0 })).toBeNull();
+    expect(formatBorderDateRange({ gwsyear: -1 })).toBeNull();
+  });
+
+  it('returns null for null/undefined properties', () => {
+    expect(formatBorderDateRange(null)).toBeNull();
+    expect(formatBorderDateRange(undefined)).toBeNull();
+  });
+
+  it('coerces string year values (properties may be deserialized as strings)', () => {
+    expect(formatBorderDateRange({ gwsyear: '1958', gweyear: '1990' })).toBe(
+      '1958\u20131990'
+    );
+  });
+
+  it('returns null when Natural Earth-style features lack gwsyear', () => {
+    // Natural Earth features have ADMIN/NAME but no gwsyear
+    expect(formatBorderDateRange({ ADMIN: 'France', NAME: 'France' })).toBeNull();
   });
 });

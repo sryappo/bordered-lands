@@ -127,3 +127,29 @@ export function formatYear(year: number): string {
   if (year < 0) return `${Math.abs(year)} BCE`;
   return String(year);
 }
+
+/**
+ * Formats a CShapes feature's temporal validity window as a human-readable
+ * string. Expects feature properties to contain `gwsyear` (start) and
+ * `gweyear` (end). Returns:
+ *   - `"1958–present"` when start is valid and end is missing/0
+ *   - `"1958–1990"` when both are valid
+ *   - `null` when start is missing/invalid (e.g. Natural Earth or pre-CShapes)
+ *
+ * Uses an en-dash (–) as the range separator.
+ */
+export function formatBorderDateRange(
+  properties: GeoJSON.GeoJsonProperties | null | undefined
+): string | null {
+  if (!properties) return null;
+  const rawStart = properties.gwsyear;
+  const start = typeof rawStart === 'number' ? rawStart : Number(rawStart);
+  if (!Number.isFinite(start) || start <= 0) return null;
+
+  const rawEnd = properties.gweyear;
+  const end = typeof rawEnd === 'number' ? rawEnd : Number(rawEnd);
+  if (!Number.isFinite(end) || end <= 0) {
+    return `${start}\u2013present`;
+  }
+  return `${start}\u2013${end}`;
+}

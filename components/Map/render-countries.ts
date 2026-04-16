@@ -1,6 +1,29 @@
 import * as d3 from 'd3';
-import { getFeatureName, getEraPalette } from '@/lib/country-metadata';
+import {
+  getFeatureName,
+  getEraPalette,
+  formatBorderDateRange,
+} from '@/lib/country-metadata';
 import { createMorphAnimator } from '@/lib/geo-morph';
+
+export interface HoverInfo {
+  feature: GeoJSON.Feature;
+  name: string;
+  dateRange: string | null;
+  event: MouseEvent;
+}
+
+function buildHoverInfo(
+  feature: GeoJSON.Feature,
+  event: MouseEvent
+): HoverInfo {
+  return {
+    feature,
+    name: getFeatureName(feature),
+    dateRange: formatBorderDateRange(feature.properties),
+    event,
+  };
+}
 
 interface RenderOptions {
   year: number;
@@ -8,7 +31,7 @@ interface RenderOptions {
   animate: boolean;
   duration: number;
   previousGeojson: GeoJSON.FeatureCollection | null;
-  onHover: (feature: GeoJSON.Feature | null, event: MouseEvent) => void;
+  onHover: (info: HoverInfo | null) => void;
   onClick: (feature: GeoJSON.Feature, event: MouseEvent) => void;
   selectedFeatureKey: string | null;
 }
@@ -71,10 +94,10 @@ export function renderCountries(
       .on('mousemove', function (event: MouseEvent) {
         const key = d3.select(this).datum() as string;
         const feature = finalFeatures.get(key) ?? null;
-        onHover(feature, event);
+        onHover(feature ? buildHoverInfo(feature, event) : null);
       })
-      .on('mouseleave', function (event: MouseEvent) {
-        onHover(null, event);
+      .on('mouseleave', function () {
+        onHover(null);
       })
       .on('click', function (event: MouseEvent) {
         const key = d3.select(this).datum() as string;
@@ -124,10 +147,10 @@ export function renderCountries(
     .style('cursor', 'pointer')
     .style('opacity', animate ? 0 : 1)
     .on('mousemove', function (event: MouseEvent, d) {
-      onHover(d, event);
+      onHover(buildHoverInfo(d, event));
     })
-    .on('mouseleave', function (event: MouseEvent) {
-      onHover(null, event);
+    .on('mouseleave', function () {
+      onHover(null);
     })
     .on('click', function (event: MouseEvent, d) {
       onClick(d, event);

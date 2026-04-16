@@ -11,15 +11,18 @@ import InfoPanel from './InfoPanel/InfoPanel';
 import { renderCountries } from './Map/render-countries';
 import { renderDisputedZones, clearDisputedZones } from './Map/render-disputed';
 import { loadBordersForYear, getDisputedForYear } from '@/lib/border-data';
-import { getFeatureName } from '@/lib/country-metadata';
 import { MAX_YEAR, MIN_YEAR, MORPH_STEP_MS, DEBOUNCE_MS } from '@/lib/constants';
 import type { BorderResult } from '@/lib/types';
 
 export default function MapApp() {
   const mapRef = useRef<MapCanvasHandle>(null);
   const [year, setYear] = useState(MAX_YEAR);
-  const [hoveredName, setHoveredName] = useState<string | null>(null);
-  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<{
+    name: string;
+    dateRange: string | null;
+    x: number;
+    y: number;
+  } | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<GeoJSON.Feature | null>(null);
   const [loading, setLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -61,13 +64,16 @@ export default function MapApp() {
           animate: animate && previousGeojsonRef.current !== null,
           duration: MORPH_STEP_MS,
           previousGeojson: previousGeojsonRef.current,
-          onHover: (feature, event) => {
-            if (feature) {
-              setHoveredName(getFeatureName(feature));
-              setHoverPos({ x: event.offsetX, y: event.offsetY });
+          onHover: (info) => {
+            if (info) {
+              setHoverInfo({
+                name: info.name,
+                dateRange: info.dateRange,
+                x: info.event.offsetX,
+                y: info.event.offsetY,
+              });
             } else {
-              setHoveredName(null);
-              setHoverPos(null);
+              setHoverInfo(null);
             }
           },
           onClick: (feature) => {
@@ -224,12 +230,17 @@ export default function MapApp() {
       </ControlOverlay>
 
       {/* Tooltip */}
-      {hoveredName && hoverPos && (
+      {hoverInfo && (
         <div
           className="absolute z-20 bg-[rgba(10,14,26,0.9)] border border-[#334] rounded px-2.5 py-1.5 text-[13px] text-white pointer-events-none whitespace-nowrap"
-          style={{ left: hoverPos.x + 12, top: hoverPos.y - 28 }}
+          style={{ left: hoverInfo.x + 12, top: hoverInfo.y - 28 }}
         >
-          {hoveredName}
+          <div>{hoverInfo.name}</div>
+          {hoverInfo.dateRange && (
+            <div className="text-[11px] text-text-secondary tabular-nums mt-0.5">
+              {hoverInfo.dateRange}
+            </div>
+          )}
         </div>
       )}
 

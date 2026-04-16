@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
-import { getFeatureName, getEraLabel, formatYear } from '@/lib/country-metadata';
+import {
+  getFeatureName,
+  getEraLabel,
+  formatYear,
+  formatBorderDateRange,
+} from '@/lib/country-metadata';
 import type { BorderResult } from '@/lib/types';
 
 interface InfoPanelProps {
@@ -34,6 +39,7 @@ export default function InfoPanel({
   const yearStr = formatYear(year);
   const source = borderResult?.source ?? 'unknown';
   const actualYear = borderResult?.actualYear ?? year;
+  const dateRange = feature ? formatBorderDateRange(feature.properties) : null;
 
   return (
     <div
@@ -68,6 +74,13 @@ export default function InfoPanel({
         <div className="text-sm text-text-secondary uppercase tracking-wider">
           {eraLabel} ({yearStr})
         </div>
+
+        {/* Border configuration validity */}
+        {dateRange && (
+          <div className="text-[13px] text-text-secondary tabular-nums">
+            Border configuration: {dateRange}
+          </div>
+        )}
 
         {/* Divider */}
         <div className="h-px bg-white/10" />
