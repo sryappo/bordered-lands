@@ -177,19 +177,107 @@ The main "wow factor." When the year changes, country borders smoothly interpola
 
 ---
 
-## Phase 2 — Optional Enhancements
+## Phase 2 — Enhancements
 
-Phase 2 builds on Phase 1's infrastructure. No new data sources required.
+Phase 2 builds on Phase 1's infrastructure. It adds a data-quality upgrade, data-driven visuals, and two new UI features. Items A–C upgrade the underlying data and tooltips (foundation); items D–E add the new UI (autoplay + timeline). A–C should land first because the UI features benefit from the richer data.
 
-### Autoplay / Cinematic Mode
+### A. CShapes 2.1 Data Integration (Foundation)
+
+**Source:** Bundled GeoJSON at `data/cshapes-2.1-simplified.json` (3.4MB, 710 features, 1886–2023, 252 unique countries). Derived from the Schvitz et al. CShapes 2.1 research dataset.
+
+**Per-feature properties:**
+- `cntry_name` — authoritative country name
+- `gwsyear` — start year of this border configuration
+- `gweyear` — end year (0 or missing = ongoing)
+
+**New data tier structure:**
+
+| Year Range | Source | Format |
+|---|---|---|
+| 2020–2026 | Natural Earth (world-atlas CDN) | TopoJSON → GeoJSON |
+| **1886–2019** | **CShapes 2.1 (bundled)** | **GeoJSON, client-side filter** |
+| pre-1886 | historical-basemaps GitHub repo | GeoJSON |
+
+- Thenmap API is **removed** from the data tier. CShapes replaces it with offline, year-level accuracy.
+- `loadBordersForYear(year)` for 1886–2019 returns a filtered view of the CShapes FeatureCollection (no network call).
+- The in-memory cache still applies — cache the filtered result by year so repeated lookups are O(1).
+- CShapes loads once on app startup (lazy on first request to any year in its range), then filtering is synchronous.
+- `actualYear` in `BorderResult` equals the requested year exactly (CShapes supports every year 1886–2023), not a snap like historical-basemaps.
+
+**Filter algorithm:**
+```typescript
+function filterForYear(features: Feature[], year: number): Feature[] {
+  return features.filter(f => {
+    const start = Number(f.properties.gwsyear);
+    let end = Number(f.properties.gweyear);
+    if (!end || end <= 0) end = 2023; // dataset's open-ended sentinel
+    return year >= start && year <= end;
+  });
+}
+```
+
+### B. Dynamic Disputed Zone Detection
+
+**Replaces:** The static 4-polygon disputed zones list (Kashmir, Crimea, Western Sahara, Golan Heights) becomes a fallback only.
+
+**New behavior:** For any year in 1886–2023 (CShapes range), disputed zones are computed from the data:
+
+```typescript
+function getDisputedForYear(features: Feature[], year: number): Feature[] {
+  return features.filter(f => {
+    const start = Number(f.properties.gwsyear);
+    const end = Number(f.properties.gweyear);
+    return year === end || year + 1 === start;
+  });
+}
+```
+
+**Logic:** A country's borders are "in flux" if they end this year (`year === end`) or if a new configuration starts next year (`year + 1 === start`). This surfaces automatically:
+- Countries about to dissolve or split
+- New states about to emerge
+- Reconfigurations about to take effect
+
+**Visual treatment:**
+- Dashed amber overlay (existing `render-disputed.ts` visual)
+- Subtle 2s pulse animation on disputed zones when autoplay is active (draws attention to imminent changes)
+- Rendered beneath country interaction layer — hover still targets underlying country, not the disputed overlay
+
+**Fallback hierarchy:**
+- 1886–2023: dynamic detection from CShapes
+- 2020+: dynamic detection from CShapes (up to 2023) merged with static hardcoded modern zones (Crimea post-2014, Kashmir, Western Sahara, Golan Heights) for current geopolitical disputes
+- pre-1886: no disputed overlay (historical-basemaps lacks temporal metadata for detection)
+
+### C. Rich Tooltips with Date Ranges
+
+**Current:** Hover shows country name only.
+
+**New:** For features sourced from CShapes, tooltip shows name + configuration date range:
+
+```
+France
+(1958–present)
+```
+
+**Format:**
+- Country name on line 1 (existing 14px style)
+- Date range on line 2 (11px, secondary color, tabular nums)
+- `end > 0` → `"(gwsyear–gweyear)"`, else `"(gwsyear–present)"`
+- Fall back to name-only for pre-1886 features (historical-basemaps has no temporal properties)
+
+**Info panel update:**
+- When a country is selected via click, the info panel also shows the configuration date range under the era context line
+- Example: `France` → `Modern Era (1958 CE)` → `Border configuration: 1958–present`
+
+### D. Autoplay / Cinematic Mode
 
 - Play button added to control bar (between rewind and forward)
 - Press play → auto-advances through years at ~400ms/year with smooth morph transitions
 - Speed adjustable by clicking speed indicator: cycles through 1x, 2x, 4x
 - Pauses at year 2026; click play to restart from current position
 - Any manual interaction (click country, drag slider, rewind/forward) pauses autoplay
+- Disputed-zone pulse animation (item B) is active during autoplay to highlight imminent border changes
 
-### Historical Event Timeline
+### E. Historical Event Timeline
 
 - Small diamond/dot markers rendered on the year slider at key historical moments
 - Curated list of ~20–30 events covering major moments:
@@ -198,6 +286,19 @@ Phase 2 builds on Phase 1's infrastructure. No new data sources required.
 - Hover a marker → tooltip with event name and year
 - Click a marker → jump to that year with the long (800ms) morph animation
 - Markers fade with controls (part of auto-hide behavior)
+- Events within the CShapes range (1886–2023) benefit from year-level accuracy — clicking "Fall of USSR (1991)" shows the exact 1991 border configuration, not a snapped approximation
+
+### Implementation Order
+
+Items A–C should be implemented first (data foundation), then D–E (UI features):
+
+1. **A** — CShapes integration into `border-data.ts` (swap out Thenmap, wire up client-side filtering)
+2. **B** — Dynamic disputed zone detection in `render-disputed.ts` (new `getDisputedForYear` path, keep static as fallback)
+3. **C** — Tooltip and info panel date-range display
+4. **D** — Autoplay mode (play button, auto-advance loop, speed cycling)
+5. **E** — Historical event timeline (marker list, slider rendering, click-to-jump)
+
+Rationale: Items D and E both benefit from A–C. The event timeline in particular depends on year-level accuracy (A) to hit events precisely, and autoplay's cinematic quality is elevated by pulsing disputed zones (B).
 
 ---
 
