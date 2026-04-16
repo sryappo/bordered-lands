@@ -1,8 +1,6 @@
 export const WORLD_ATLAS_URL =
   'https://unpkg.com/world-atlas@2/countries-110m.json';
 
-export const THENMAP_URL = 'https://api.thenmap.net/v2/world-2/geo/';
-
 export const HIST_BASE_URL =
   'https://raw.githubusercontent.com/aourednik/historical-basemaps/master/geojson/';
 

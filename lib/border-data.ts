@@ -4,12 +4,12 @@ import type { BorderResult } from './types';
 import { getCountryName } from './country-metadata';
 import {
   WORLD_ATLAS_URL,
-  THENMAP_URL,
   HIST_BASE_URL,
   HISTORICAL_YEARS,
   MIN_YEAR,
   MAX_YEAR,
 } from './constants';
+import { loadCShapesForYear, CSHAPES_MIN_YEAR } from './cshapes-loader';
 
 const cache = new Map<number, BorderResult>();
 let modernGeoData: GeoJSON.FeatureCollection | null = null;
@@ -59,24 +59,6 @@ async function loadModernBorders(): Promise<GeoJSON.FeatureCollection> {
   return geojson;
 }
 
-async function loadThenmapBorders(
-  year: number
-): Promise<GeoJSON.FeatureCollection> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
-  try {
-    const resp = await fetch(`${THENMAP_URL}${year}`, {
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (!resp.ok) throw new Error(`Thenmap API error: ${resp.status}`);
-    return (await resp.json()) as GeoJSON.FeatureCollection;
-  } catch (err) {
-    clearTimeout(timeoutId);
-    throw err;
-  }
-}
-
 async function loadHistoricalBorders(
   year: number
 ): Promise<{ data: GeoJSON.FeatureCollection; actualYear: number }> {
@@ -109,18 +91,9 @@ export async function loadBordersForYear(
   if (year >= 2020) {
     const geojson = await loadModernBorders();
     result = { geojson, source: 'natural-earth', actualYear: year };
-  } else if (year >= 1945) {
-    try {
-      const geojson = await loadThenmapBorders(year);
-      result = { geojson, source: 'thenmap', actualYear: year };
-    } catch {
-      const { data, actualYear } = await loadHistoricalBorders(year);
-      result = {
-        geojson: data,
-        source: 'historical-basemaps',
-        actualYear,
-      };
-    }
+  } else if (year >= CSHAPES_MIN_YEAR) {
+    const geojson = await loadCShapesForYear(year);
+    result = { geojson, source: 'cshapes', actualYear: year };
   } else {
     const { data, actualYear } = await loadHistoricalBorders(year);
     result = { geojson: data, source: 'historical-basemaps', actualYear };
