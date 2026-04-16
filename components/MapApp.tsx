@@ -6,12 +6,19 @@ import MapCanvas, { type MapCanvasHandle } from './Map/MapCanvas';
 import YearDisplay from './Controls/YearDisplay';
 import PlaybackButtons from './Controls/PlaybackButtons';
 import YearSlider from './Controls/YearSlider';
+import EventTimeline from './Controls/EventTimeline';
 import ControlOverlay from './Controls/ControlOverlay';
 import InfoPanel from './InfoPanel/InfoPanel';
 import { renderCountries } from './Map/render-countries';
 import { renderDisputedZones, clearDisputedZones } from './Map/render-disputed';
 import { loadBordersForYear, getDisputedForYear } from '@/lib/border-data';
-import { MAX_YEAR, MIN_YEAR, MORPH_STEP_MS, DEBOUNCE_MS } from '@/lib/constants';
+import {
+  MAX_YEAR,
+  MIN_YEAR,
+  MORPH_STEP_MS,
+  MORPH_JUMP_MS,
+  DEBOUNCE_MS,
+} from '@/lib/constants';
 import type { BorderResult } from '@/lib/types';
 
 export default function MapApp() {
@@ -40,7 +47,7 @@ export default function MapApp() {
   const isAutoplayRef = useRef(false);
 
   const updateMap = useCallback(
-    async (targetYear: number, animate: boolean) => {
+    async (targetYear: number, animate: boolean, isJump = false) => {
       const map = mapRef.current;
       if (!map) return;
 
@@ -65,7 +72,7 @@ export default function MapApp() {
           year: targetYear,
           pathGenerator,
           animate: animate && previousGeojsonRef.current !== null,
-          duration: MORPH_STEP_MS,
+          duration: isJump ? MORPH_JUMP_MS : MORPH_STEP_MS,
           previousGeojson: previousGeojsonRef.current,
           onHover: (info) => {
             if (info) {
@@ -235,6 +242,19 @@ export default function MapApp() {
     [handleYearChange, stopAutoplay]
   );
 
+  const handleEventJump = useCallback(
+    (targetYear: number) => {
+      stopAutoplay();
+      setYear(targetYear);
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        debounceTimerRef.current = null;
+        updateMap(targetYear, true, true);
+      }, DEBOUNCE_MS);
+    },
+    [stopAutoplay, updateMap]
+  );
+
   const handleRewindingChange = useCallback(
     (rewinding: boolean) => {
       if (rewinding) stopAutoplay();
@@ -307,7 +327,14 @@ export default function MapApp() {
             onTogglePlay={handleTogglePlay}
             onCycleSpeed={handleCycleSpeed}
           />
-          <YearSlider year={year} onYearChange={handleSliderChange} />
+          <div className="relative w-full max-w-[600px] flex justify-center">
+            <YearSlider year={year} onYearChange={handleSliderChange} />
+            {/* Event markers overlay — positioned over the slider track.
+                Insets match YearSlider's side labels (58px + 30px + gaps). */}
+            <div className="pointer-events-none absolute inset-y-0 left-[70px] right-[42px]">
+              <EventTimeline onJump={handleEventJump} />
+            </div>
+          </div>
           {/* Legend */}
           <div className="flex gap-5 text-xs text-[#667]">
             <span className="flex items-center gap-1.5">
