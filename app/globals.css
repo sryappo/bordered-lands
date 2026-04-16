@@ -46,3 +46,20 @@ body {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Disputed zone pulse animation (used during autoplay) */
+@keyframes disputed-pulse {
+  0%,
+  100% {
+    stroke-opacity: 1;
+    fill-opacity: 0.08;
+  }
+  50% {
+    stroke-opacity: 0.5;
+    fill-opacity: 0.2;
+  }
+}
+
+.disputed-pulse {
+  animation: disputed-pulse 2s ease-in-out infinite;
+}

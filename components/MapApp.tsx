@@ -10,7 +10,7 @@ import ControlOverlay from './Controls/ControlOverlay';
 import InfoPanel from './InfoPanel/InfoPanel';
 import { renderCountries } from './Map/render-countries';
 import { renderDisputedZones, clearDisputedZones } from './Map/render-disputed';
-import { loadBordersForYear, getDisputedZones } from '@/lib/border-data';
+import { loadBordersForYear, getDisputedForYear } from '@/lib/border-data';
 import { getFeatureName } from '@/lib/country-metadata';
 import { MAX_YEAR, MIN_YEAR, MORPH_STEP_MS, DEBOUNCE_MS } from '@/lib/constants';
 import type { BorderResult } from '@/lib/types';
@@ -24,12 +24,14 @@ export default function MapApp() {
   const [loading, setLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRewinding, setIsRewinding] = useState(false);
+  const [disputedGeojson, setDisputedGeojson] = useState<GeoJSON.FeatureCollection | null>(null);
 
   const previousGeojsonRef = useRef<GeoJSON.FeatureCollection | null>(null);
   const currentResultRef = useRef<BorderResult | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRenderYearRef = useRef<number | null>(null);
   const isRewindingRef = useRef(false);
+  const disputedGeojsonRef = useRef<GeoJSON.FeatureCollection | null>(null);
 
   const updateMap = useCallback(
     async (targetYear: number, animate: boolean) => {
@@ -78,8 +80,11 @@ export default function MapApp() {
           selectedFeatureKey: null,
         });
 
-        if (targetYear >= 1990) {
-          renderDisputedZones(disputedGroup, getDisputedZones(), pathGenerator);
+        const disputedData = disputedGeojsonRef.current;
+        if (disputedData && disputedData.features.length > 0) {
+          renderDisputedZones(disputedGroup, disputedData, pathGenerator, {
+            pulse: false,
+          });
         } else {
           clearDisputedZones(disputedGroup);
         }
@@ -105,6 +110,41 @@ export default function MapApp() {
   useEffect(() => {
     isRewindingRef.current = isRewinding;
   }, [isRewinding]);
+
+  // Load disputed zones when year changes. Uses a cancelled flag so that
+  // rapid slider scrubbing only commits the latest result.
+  useEffect(() => {
+    let cancelled = false;
+    getDisputedForYear(year)
+      .then((data) => {
+        if (cancelled) return;
+        setDisputedGeojson(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error(`Failed to load disputed zones for year ${year}:`, err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [year]);
+
+  // Mirror disputed state to a ref and re-render the overlay when it changes.
+  useEffect(() => {
+    disputedGeojsonRef.current = disputedGeojson;
+    const map = mapRef.current;
+    if (!map) return;
+    const pathGenerator = map.getPathGenerator();
+    const disputedGroup = map.getDisputedGroup();
+    if (!pathGenerator || !disputedGroup) return;
+    if (disputedGeojson && disputedGeojson.features.length > 0) {
+      renderDisputedZones(disputedGroup, disputedGeojson, pathGenerator, {
+        pulse: false,
+      });
+    } else {
+      clearDisputedZones(disputedGroup);
+    }
+  }, [disputedGeojson]);
 
   const handleYearChange = useCallback(
     (newYear: number, shouldAnimate = true) => {

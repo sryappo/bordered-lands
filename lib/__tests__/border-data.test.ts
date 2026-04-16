@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   historicalUrl,
   findNearestHistoricalYear,
+  getDisputedForYear,
 } from '../border-data';
 
 describe('historicalUrl', () => {
@@ -35,5 +36,18 @@ describe('findNearestHistoricalYear', () => {
 
   it('returns first year for values before the range', () => {
     expect(findNearestHistoricalYear(-5000)).toBe(-3000);
+  });
+});
+
+describe('getDisputedForYear', () => {
+  it('returns an empty FeatureCollection for pre-CShapes years', async () => {
+    const result = await getDisputedForYear(1800);
+    expect(result.type).toBe('FeatureCollection');
+    expect(result.features).toEqual([]);
+  });
+
+  it('returns an empty FeatureCollection well before 1886', async () => {
+    const result = await getDisputedForYear(-500);
+    expect(result.features).toEqual([]);
   });
 });

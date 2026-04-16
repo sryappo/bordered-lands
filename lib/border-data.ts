@@ -9,7 +9,12 @@ import {
   MIN_YEAR,
   MAX_YEAR,
 } from './constants';
-import { loadCShapesForYear, CSHAPES_MIN_YEAR } from './cshapes-loader';
+import {
+  loadCShapesForYear,
+  loadCShapesDisputedForYear,
+  CSHAPES_MIN_YEAR,
+  CSHAPES_MAX_YEAR,
+} from './cshapes-loader';
 
 const cache = new Map<number, BorderResult>();
 let modernGeoData: GeoJSON.FeatureCollection | null = null;
@@ -104,7 +109,9 @@ export async function loadBordersForYear(
 }
 
 // Disputed territories — curated GeoJSON (ported from legacy)
-const DISPUTED_ZONES: GeoJSON.FeatureCollection = {
+// Used as the static "modern" overlay for years >= 2020; also served by the
+// legacy sync getDisputedZones() accessor for backward compatibility.
+const MODERN_STATIC_DISPUTED: GeoJSON.FeatureCollection = {
   type: 'FeatureCollection',
   features: [
     {
@@ -158,7 +165,39 @@ const DISPUTED_ZONES: GeoJSON.FeatureCollection = {
 };
 
 export function getDisputedZones(): GeoJSON.FeatureCollection {
-  return DISPUTED_ZONES;
+  return MODERN_STATIC_DISPUTED;
+}
+
+/**
+ * Returns disputed-zone features appropriate for the given year.
+ *
+ * - `year >= 2020`: merges dynamically detected CShapes disputed features
+ *   (through CSHAPES_MAX_YEAR) with the curated modern static zones.
+ * - `CSHAPES_MIN_YEAR <= year < 2020`: CShapes-detected only (countries
+ *   whose lifespan brackets `year`, indicating a border change across it).
+ * - `year < CSHAPES_MIN_YEAR`: returns an empty FeatureCollection — the
+ *   historical-basemaps dataset lacks temporal metadata for detection.
+ */
+export async function getDisputedForYear(
+  year: number
+): Promise<GeoJSON.FeatureCollection> {
+  if (year >= 2020) {
+    const cshapesDisputed =
+      year <= CSHAPES_MAX_YEAR
+        ? await loadCShapesDisputedForYear(year)
+        : { type: 'FeatureCollection' as const, features: [] };
+    return {
+      type: 'FeatureCollection',
+      features: [
+        ...cshapesDisputed.features,
+        ...MODERN_STATIC_DISPUTED.features,
+      ],
+    };
+  }
+  if (year >= CSHAPES_MIN_YEAR) {
+    return loadCShapesDisputedForYear(year);
+  }
+  return { type: 'FeatureCollection', features: [] };
 }
 
 export function getMinYear(): number {
