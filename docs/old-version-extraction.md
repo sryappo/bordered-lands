@@ -1,6 +1,6 @@
 # Old Version Extraction — Reference for Phase 2+
 
-Extracted from: `/Users/sergeyryappo/Desktop/Creative Project Portfolio/Bordered Lands Project/world_map_app/`
+Extracted from the original `world_map_app/` prototype (Leaflet + CShapes, archived outside the repo).
 
 ## 1. CShapes 2.1 Dataset
 
