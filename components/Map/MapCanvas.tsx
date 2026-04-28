@@ -68,9 +68,30 @@ const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
         renderGraticule(gratGroup, pathGenerator);
       }
 
-      // Zoom
+      // Zoom with inertial pan: track velocity during user drag, then keep
+      // panning briefly after pointerup with exponential decay so motion
+      // feels continuous (Apple-style "flick" scroll).
+      let lastSample: { x: number; y: number; t: number } | null = null;
+      let velocity = { x: 0, y: 0 };
+      let inertiaTimer: d3.Timer | null = null;
+
       const zoom = d3.zoom<SVGSVGElement, unknown>()
         .scaleExtent([0.5, 12])
+        .on('start', (event) => {
+          // Cancel any in-flight inertia when the user grabs the map again.
+          if (inertiaTimer) {
+            inertiaTimer.stop();
+            inertiaTimer = null;
+          }
+          if (event.sourceEvent) {
+            lastSample = {
+              x: event.transform.x,
+              y: event.transform.y,
+              t: performance.now(),
+            };
+            velocity = { x: 0, y: 0 };
+          }
+        })
         .on('zoom', (event) => {
           g.attr('transform', event.transform.toString());
           const gratG = g.select<SVGGElement>('.graticule-group');
@@ -78,6 +99,65 @@ const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
             updateGraticuleVisibility(gratG, event.transform.k);
           }
           onZoomChange?.(event.transform.k);
+
+          // Sample velocity only for genuine user input. Programmatic
+          // transforms (no sourceEvent) are how inertia drives the map and
+          // would otherwise feed back into themselves.
+          if (event.sourceEvent && lastSample) {
+            const now = performance.now();
+            const dt = now - lastSample.t;
+            if (dt > 0) {
+              // Exponential smoothing so a single jittery frame doesn't
+              // dominate the launch velocity.
+              const newVx = (event.transform.x - lastSample.x) / dt;
+              const newVy = (event.transform.y - lastSample.y) / dt;
+              velocity.x = velocity.x * 0.5 + newVx * 0.5;
+              velocity.y = velocity.y * 0.5 + newVy * 0.5;
+            }
+            lastSample = {
+              x: event.transform.x,
+              y: event.transform.y,
+              t: now,
+            };
+          }
+        })
+        .on('end', (event) => {
+          if (!event.sourceEvent) return;
+          const speed = Math.hypot(velocity.x, velocity.y);
+          if (speed < 0.05) return; // not enough momentum, skip inertia
+
+          const decay = 0.92;
+          let vx = velocity.x;
+          let vy = velocity.y;
+          let prevElapsed = 0;
+
+          if (inertiaTimer) inertiaTimer.stop();
+          inertiaTimer = d3.timer((elapsed) => {
+            const dt = elapsed - prevElapsed;
+            prevElapsed = elapsed;
+            // Apply per-frame decay scaled by dt so behavior is framerate-
+            // independent (decay^(dt/16) ≈ decay once per ~16ms frame).
+            const frameDecay = Math.pow(decay, dt / 16);
+            vx *= frameDecay;
+            vy *= frameDecay;
+
+            const current = d3.zoomTransform(svg.node()!);
+            const next = d3.zoomIdentity
+              .translate(current.x + vx * dt, current.y + vy * dt)
+              .scale(current.k);
+
+            // Stop when motion is imperceptible or after a hard timeout.
+            if (Math.hypot(vx, vy) < 0.01 || elapsed > 800) {
+              inertiaTimer?.stop();
+              inertiaTimer = null;
+              return true;
+            }
+
+            // Programmatic transform: no sourceEvent, so the zoom handler
+            // skips velocity sampling and we don't recurse.
+            svg.call(zoom.transform, next);
+            return false;
+          });
         });
 
       svg.call(zoom);
