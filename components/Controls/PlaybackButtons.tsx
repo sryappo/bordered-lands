@@ -153,7 +153,7 @@ export default function PlaybackButtons({
     <div className="flex items-center gap-4">
       {/* Forward button */}
       <button
-        className="w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 text-[#ccc] flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/15 hover:text-white hover:border-white/30 active:bg-accent-amber/20 active:border-accent-amber active:text-accent-amber"
+        className="btn-lift w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 text-[#ccc] flex items-center justify-center cursor-pointer hover:bg-white/15 hover:text-white hover:border-white/30 active:bg-accent-amber/20 active:border-accent-amber active:text-accent-amber"
         onPointerDown={() => handlePointerDown(1)}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
@@ -170,7 +170,7 @@ export default function PlaybackButtons({
         onClick={onTogglePlay}
         aria-label={isAutoplay ? 'Pause' : 'Play'}
         title={isAutoplay ? 'Pause autoplay' : 'Play autoplay'}
-        className={`w-12 h-12 rounded-full border flex items-center justify-center cursor-pointer transition-all duration-200 ${
+        className={`btn-lift w-12 h-12 rounded-full border flex items-center justify-center cursor-pointer ${
           isAutoplay
             ? 'bg-accent-amber/20 border-accent-amber text-accent-amber hover:bg-accent-amber/30'
             : 'bg-white/[0.08] border-white/15 text-[#ccc] hover:bg-white/15 hover:text-white hover:border-white/30'
@@ -190,7 +190,7 @@ export default function PlaybackButtons({
 
       {/* Rewind button (primary) */}
       <button
-        className="w-[52px] h-[52px] rounded-full bg-white/[0.08] border border-white/15 text-[#ccc] flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/15 hover:text-white hover:border-white/30 active:bg-accent-amber/20 active:border-accent-amber active:text-accent-amber"
+        className="btn-lift w-[52px] h-[52px] rounded-full bg-white/[0.08] border border-white/15 text-[#ccc] flex items-center justify-center cursor-pointer hover:bg-white/15 hover:text-white hover:border-white/30 active:bg-accent-amber/20 active:border-accent-amber active:text-accent-amber"
         onPointerDown={() => handlePointerDown(-1)}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}

@@ -74,6 +74,24 @@ body {
   animation: disputed-pulse 2s ease-in-out infinite;
 }
 
+/* Hover lift + active press feedback for control buttons */
+.btn-lift {
+  transition:
+    transform 200ms var(--ease-apple),
+    box-shadow 200ms var(--ease-apple),
+    background-color 200ms var(--ease-apple),
+    border-color 200ms var(--ease-apple),
+    color 200ms var(--ease-apple);
+}
+.btn-lift:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.15);
+}
+.btn-lift:active {
+  transform: scale(0.98);
+  transition-duration: 80ms;
+}
+
 /* Year tick cross-fade — only the numeric year, not the era label */
 @keyframes year-tick {
   0% {

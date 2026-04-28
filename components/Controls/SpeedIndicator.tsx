@@ -24,7 +24,7 @@ export default function SpeedIndicator({
         type="button"
         onClick={onCycleSpeed}
         aria-label={`Playback speed ${autoplaySpeed}x (click to cycle)`}
-        className="text-[13px] text-accent-amber min-w-[30px] text-center cursor-pointer rounded px-1 py-0.5 hover:bg-white/10 hover:text-white transition-colors tabular-nums"
+        className="btn-lift text-[13px] text-accent-amber min-w-[30px] text-center cursor-pointer rounded px-1 py-0.5 hover:bg-white/10 hover:text-white tabular-nums"
       >
         {autoplaySpeed}x
       </button>
