@@ -9,7 +9,7 @@ interface YearDisplayProps {
 
 export default function YearDisplay({ year, isRewinding }: YearDisplayProps) {
   return (
-    <div className="absolute top-0 left-0 right-0 z-10 text-center pt-[18px] pb-2 pointer-events-none bg-gradient-to-b from-dark-bg/85 to-transparent">
+    <div className="absolute top-0 left-0 right-0 z-10 text-center pt-[18px] pb-2 pointer-events-none bg-gradient-to-b from-dark-bg/65 to-transparent [backdrop-filter:blur(20px)_saturate(180%)] [-webkit-backdrop-filter:blur(20px)_saturate(180%)] [mask-image:linear-gradient(to_bottom,black_0%,black_60%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,black_60%,transparent_100%)]">
       <div
         className={`text-[72px] font-extralight tracking-[6px] leading-none transition-colors duration-300 tabular-nums ${
           isRewinding

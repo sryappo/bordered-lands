@@ -317,7 +317,7 @@ export default function MapApp() {
       </ControlOverlay>
 
       <ControlOverlay forceVisible={isRewinding || isAutoplay}>
-        <div className="absolute bottom-0 left-0 right-0 z-10 pb-4 flex flex-col items-center gap-2.5 bg-gradient-to-t from-dark-bg/[0.92] to-transparent pt-12">
+        <div className="absolute bottom-0 left-0 right-0 z-10 pb-4 flex flex-col items-center gap-2.5 bg-gradient-to-t from-dark-bg/70 to-transparent pt-12 [backdrop-filter:blur(20px)_saturate(180%)] [-webkit-backdrop-filter:blur(20px)_saturate(180%)] [mask-image:linear-gradient(to_top,black_0%,black_60%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_top,black_0%,black_60%,transparent_100%)]">
           <PlaybackButtons
             year={year}
             onYearStep={handleYearStep}
@@ -352,7 +352,7 @@ export default function MapApp() {
       {/* Tooltip */}
       {hoverInfo && (
         <div
-          className="absolute z-20 bg-[rgba(10,14,26,0.9)] border border-[#334] rounded px-2.5 py-1.5 text-[13px] text-white pointer-events-none whitespace-nowrap"
+          className="absolute z-20 bg-[rgba(10,14,26,0.6)] border border-white/15 rounded px-2.5 py-1.5 text-[13px] text-white pointer-events-none whitespace-nowrap shadow-lg [backdrop-filter:blur(12px)_saturate(150%)] [-webkit-backdrop-filter:blur(12px)_saturate(150%)] animate-tooltip-in"
           style={{ left: hoverInfo.x + 12, top: hoverInfo.y - 28 }}
         >
           <div>{hoverInfo.name}</div>

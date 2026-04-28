@@ -73,3 +73,18 @@ body {
 .disputed-pulse {
   animation: disputed-pulse 2s ease-in-out infinite;
 }
+
+/* Tooltip mount-in fade */
+@keyframes tooltip-in {
+  0% {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-tooltip-in {
+  animation: tooltip-in 140ms var(--ease-apple);
+}
