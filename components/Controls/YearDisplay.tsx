@@ -17,7 +17,12 @@ export default function YearDisplay({ year, isRewinding }: YearDisplayProps) {
             : 'text-white [text-shadow:0_0_30px_rgba(100,160,255,0.4)]'
         }`}
       >
-        {formatYear(year)}
+        {/* Key remount triggers the cross-fade per year change. The era label
+            below is intentionally NOT keyed so it stays static across years
+            within an era. */}
+        <span key={year} className="inline-block animate-year-tick tabular-nums">
+          {formatYear(year)}
+        </span>
       </div>
       <div className="text-[13px] text-text-secondary tracking-[2px] uppercase mt-1 min-h-[20px]">
         {getEraLabel(year)}

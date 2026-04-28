@@ -74,6 +74,21 @@ body {
   animation: disputed-pulse 2s ease-in-out infinite;
 }
 
+/* Year tick cross-fade — only the numeric year, not the era label */
+@keyframes year-tick {
+  0% {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-year-tick {
+  animation: year-tick 180ms var(--ease-apple);
+}
+
 /* Tooltip mount-in fade */
 @keyframes tooltip-in {
   0% {
