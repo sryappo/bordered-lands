@@ -23,7 +23,7 @@ export const DEBOUNCE_MS = 60;
 export const MORPH_STEP_MS = 300;
 export const MORPH_JUMP_MS = 800;
 export const CONTROL_HIDE_DELAY = 3000;
-export const CONTROL_FADE_MS = 300;
+export const CONTROL_FADE_MS = 400;
 
 // Era color palettes — discrete per era bracket
 // Ancient/Classical (< 0): warm ambers/ochres

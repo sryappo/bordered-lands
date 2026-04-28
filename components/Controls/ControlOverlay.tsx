@@ -53,7 +53,10 @@ export default function ControlOverlay({
     <div
       style={{
         opacity: visible ? 1 : 0,
-        transition: `opacity ${CONTROL_FADE_MS}ms var(--ease-apple)`,
+        // Drift the controls downward as they fade out so the disappearance
+        // feels weighted, then settle back to neutral on fade-in.
+        transform: visible ? 'translateY(0)' : 'translateY(4px)',
+        transition: `opacity ${CONTROL_FADE_MS}ms var(--ease-apple), transform ${CONTROL_FADE_MS}ms var(--ease-apple)`,
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
