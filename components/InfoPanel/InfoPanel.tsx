@@ -43,11 +43,14 @@ export default function InfoPanel({
 
   return (
     <div
-      className={`fixed top-0 right-0 h-full w-[360px] z-30 bg-[rgba(10,14,26,0.92)] border-l-2 border-accent-blue flex flex-col transition-transform ${
-        isOpen
-          ? 'translate-x-0 duration-[250ms] ease-out'
-          : 'translate-x-full duration-[200ms] ease-in'
+      className={`fixed top-0 right-0 h-full w-[360px] z-30 bg-[rgba(10,14,26,0.92)] border-l-2 border-accent-blue flex flex-col ${
+        isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
+      style={{
+        transition: isOpen
+          ? 'transform 320ms var(--ease-apple-spring)'
+          : 'transform 220ms var(--ease-apple)',
+      }}
     >
       {/* Close button */}
       <button

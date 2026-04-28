@@ -105,8 +105,11 @@ export function renderCountries(
         if (feature) onClick(feature, event);
       });
 
-    // Animate morph
-    const ease = d3.easeCubicOut;
+    // Animate morph using an approximation of Apple's
+    // cubic-bezier(0.32, 0.72, 0, 1) curve. d3.timer expects a numeric easer,
+    // and 1 - (1 - t)^1.8 tracks Apple's curve more closely than easeCubicOut
+    // (which decelerates too aggressively at the tail).
+    const ease = (t: number) => 1 - Math.pow(1 - t, 1.8);
     const timer = d3.timer((elapsed) => {
       const t = Math.min(elapsed / duration, 1);
       const eased = ease(t);

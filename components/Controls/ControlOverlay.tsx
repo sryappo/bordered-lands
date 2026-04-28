@@ -51,10 +51,9 @@ export default function ControlOverlay({
 
   return (
     <div
-      className="transition-opacity"
       style={{
         opacity: visible ? 1 : 0,
-        transitionDuration: `${CONTROL_FADE_MS}ms`,
+        transition: `opacity ${CONTROL_FADE_MS}ms var(--ease-apple)`,
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
